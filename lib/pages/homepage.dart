@@ -1,9 +1,6 @@
-// lib/homepage.dart
+// lib/pages/home_page.dart
+
 import 'package:flutter/material.dart';
-import 'notes_page.dart';
-import 'timetable_page.dart';
-import 'todo_page.dart';
-// Import other dependencies or internal packages as needed.
 
 class HomePage extends StatelessWidget {
   @override
@@ -12,38 +9,44 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Home'),
       ),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
+          // Center the buttons vertically and stretch them horizontally
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ElevatedButton.icon(
+              icon: Icon(Icons.check_box),
+              label: Text('To-Do List'),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => NotesPage()),
-                );
+                Navigator.pushNamed(context, '/todo');
               },
-              child: Text('Notes'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 16),
+              ),
             ),
             SizedBox(height: 20),
-            ElevatedButton(
+            ElevatedButton.icon(
+              icon: Icon(Icons.calendar_today),
+              label: Text('Timetable'),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TimetablePage()),
-                );
+                Navigator.pushNamed(context, '/timetable');
               },
-              child: Text('Timetable'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 16),
+              ),
             ),
             SizedBox(height: 20),
-            ElevatedButton(
+            ElevatedButton.icon(
+              icon: Icon(Icons.note),
+              label: Text('Notes'),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ToDoPage()),
-                );
+                Navigator.pushNamed(context, '/notes');
               },
-              child: Text('To-Do'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 16),
+              ),
             ),
           ],
         ),

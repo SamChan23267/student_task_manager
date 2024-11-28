@@ -1,6 +1,6 @@
-// lib/notes_page.dart
+// lib/pages/notes_page.dart
+
 import 'package:flutter/material.dart';
-// Import other dependencies or internal packages as needed.
 
 class NotesPage extends StatelessWidget {
   @override
@@ -10,10 +10,7 @@ class NotesPage extends StatelessWidget {
         title: Text('Notes'),
       ),
       body: Center(
-        child: Text(
-          'Notes Page Content Here',
-          style: TextStyle(fontSize: 24),
-        ),
+        child: Text('This is the Notes Page'),
       ),
     );
   }
