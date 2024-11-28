@@ -21,7 +21,11 @@ void main() async {
   Hive.registerAdapter(TaskAdapter());
 
   // Open the Hive box for tasks
-  await Hive.openBox<Task>('tasks');
+  var box = await Hive.openBox<Task>('tasks');
+
+  // Clear existing tasks -- remove or comment out this line in production
+  // await box.clear();
+
 
   // Run the Flutter application
   runApp(MyApp());
