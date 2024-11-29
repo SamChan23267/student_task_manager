@@ -36,8 +36,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // Add the observer to listen to app lifecycle changes
-    WidgetsBinding.instance.addObserver(this);
+    //_clearHiveBoxes();
+  }
+
+  Future<void> _clearHiveBoxes() async {
+    var tasksBox = await Hive.openBox('tasks');
+    var eventsBox = await Hive.openBox('events');
+
+    await tasksBox.clear();
+    await eventsBox.clear();
   }
 
   @override
@@ -63,6 +70,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         break;
     }
   }
+
+  
 
   @override
   Widget build(BuildContext context) {
