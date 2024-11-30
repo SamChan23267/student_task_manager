@@ -13,8 +13,8 @@ class TimetablePage extends StatefulWidget {
 
 class _TimetablePageState extends State<TimetablePage> {
   late Box<Event> eventBox;
-  bool _isHiveInitialized = false;
-  String? _initializationError;
+  CalendarController _calendarController = CalendarController();
+
 
   @override
   void initState() {
@@ -61,7 +61,24 @@ class _TimetablePageState extends State<TimetablePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Timetable'),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                _calendarController.backward!();
+              },
+            ),
+            SizedBox(width: 16), // Add some spacing between the buttons
+            IconButton(
+              icon: Icon(Icons.arrow_forward),
+              onPressed: () {
+                _calendarController.forward!();
+              },
+            ),
+          ],
+        ),
       ),
       body: ValueListenableBuilder(
         valueListenable: eventBox!.listenable(),
@@ -69,6 +86,7 @@ class _TimetablePageState extends State<TimetablePage> {
           print('ValueListenableBuilder triggered, events have changed.');
           return SfCalendar(
             view: CalendarView.month,
+            controller: _calendarController,
             dataSource: EventDataSource(_getCalendarEvents(box)),
             monthViewSettings: MonthViewSettings(
               appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
