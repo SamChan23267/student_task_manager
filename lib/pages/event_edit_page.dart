@@ -3,43 +3,53 @@ import 'package:hive/hive.dart';
 
 import '../models/event.dart';
 
-class EventCreationPage extends StatefulWidget {
-  final Box<Event> eventBox;
 
-  EventCreationPage({required this.eventBox});
+class EventEditPage extends StatefulWidget {
+  final Event event;
+
+  EventEditPage({required this.event});
 
   @override
-  _EventCreationPageState createState() => _EventCreationPageState();
+  _EventEditPageState createState() => _EventEditPageState();
 }
 
-class _EventCreationPageState extends State<EventCreationPage> {
+class _EventEditPageState extends State<EventEditPage> {
   final _formKey = GlobalKey<FormState>();
-
-
-  String _title = '';
-  String _description = '';
-  List<TimePeriod> _timePeriods = [];
-  String _repeat = "Doesn't repeat";
+  late String _title;
+  late String _description;
+  late List<TimePeriod> _timePeriods;
+  late String _repeat;
   List<String> _repeatOptions = ["Doesn't repeat", "Custom"];
 
   @override
   void initState() {
     super.initState();
-    _addInitialTimePeriod();
+    _title = widget.event.title;
+    _description = widget.event.description;
+    _timePeriods = List<TimePeriod>.from(widget.event.timePeriods);
+    _repeat = widget.event.repeat;
   }
 
-  void _addInitialTimePeriod() {
-    _addTimePeriod();
-    _updateRepeatOptions();
+  void _saveEvent() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      // Update the existing event
+      widget.event.title = _title;
+      widget.event.description = _description;
+      widget.event.timePeriods = _timePeriods;
+      widget.event.repeat = _repeat;
+      await widget.event.save();
+
+      Navigator.of(context).pop();
+    }
   }
 
   void _addTimePeriod() {
     setState(() {
-      var startDate = DateTime.now();
-      var endDate = DateTime.now().add(Duration(hours: 1));
       _timePeriods.add(TimePeriod(
-        startDate: startDate,
-        endDate: endDate,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(Duration(hours: 1)),
         isAllDay: false,
       ));
 
@@ -47,23 +57,42 @@ class _EventCreationPageState extends State<EventCreationPage> {
     });
   }
 
-  void _saveEvent() {
-    if (_formKey.currentState?.validate() ?? false) {
-      _formKey.currentState?.save();
+  void _removeTimePeriod(int index) {
+    setState(() {
+      if (_timePeriods.length > 1) {
+        _timePeriods.removeAt(index);
+        _updateRepeatOptions();
+      }
+    });
+  }
 
-      Event event = Event(
-        title: _title,
-        description: _description,
-        timePeriods: _timePeriods,
-        repeat: _repeat,
-      );
+  Future<void> _pickStartDate(BuildContext context, int index) async {
+    final DateTime? date = await showDatePicker(
+      context: context,
+      initialDate: _timePeriods[index].startDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
 
-      // Save the event to the Hive box
-      widget.eventBox.add(event);
 
-      Navigator.pop(context);
+    if (date != null) {
+      setState(() {
+        TimeOfDay time = TimeOfDay.fromDateTime(_timePeriods[index].startDate);
+        _timePeriods[index].startDate =
+            DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+
+        // Adjust end date if necessary
+        if (_timePeriods[index].startDate.isAfter(_timePeriods[index].endDate)) {
+          _timePeriods[index].endDate = _timePeriods[index].startDate;
+        }
+
+
+        _updateRepeatOptions();
+      });
     }
   }
+
 
   void _updateRepeatOptions() {
     if (_timePeriods.isEmpty) return;
@@ -97,7 +126,6 @@ class _EventCreationPageState extends State<EventCreationPage> {
     if (totalDuration.inDays <= 365) {
       options.insert(1, 'Repeat annually');
     }
-
     setState(() {
       _repeatOptions = options;
 
@@ -108,20 +136,115 @@ class _EventCreationPageState extends State<EventCreationPage> {
     });
   }
 
-  void _removeTimePeriod(int index) {
+  void _toggleAllDay(int index, bool? value) {
     setState(() {
-      if (_timePeriods.length > 1) {
-        _timePeriods.removeAt(index);
-        _updateRepeatOptions();
-      }
+      _timePeriods[index].isAllDay = value ?? false;
     });
   }
+
+  void _deleteEvent() async {
+    await widget.event.delete();
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _pickEndDate(BuildContext context, int index) async {
+    final DateTime? date = await showDatePicker(
+      context: context,
+      initialDate: _timePeriods[index].endDate,
+      firstDate: _timePeriods[index].startDate,
+      lastDate: DateTime(2101),
+    );
+
+
+    if (date != null) {
+      setState(() {
+        TimeOfDay time = TimeOfDay.fromDateTime(_timePeriods[index].endDate);
+        _timePeriods[index].endDate =
+            DateTime(date.year, date.month, date.day, time.hour, time.minute);
+        _updateRepeatOptions();
+      });
+    }
+  }
+
+  Future<void> _pickStartTime(BuildContext context, int index) async {
+    if (_timePeriods[index].isAllDay) return;
+
+
+    final TimeOfDay? time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_timePeriods[index].startDate),
+    );
+
+
+    if (time != null) {
+      setState(() {
+        DateTime date = _timePeriods[index].startDate;
+        _timePeriods[index].startDate =
+            DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+
+        // Adjust end time if necessary
+        if (_timePeriods[index].startDate.isAfter(_timePeriods[index].endDate)) {
+          _timePeriods[index].endDate = _timePeriods[index].startDate;
+        } else if (_timePeriods[index]
+            .startDate
+            .isAtSameMomentAs(_timePeriods[index].endDate)) {
+          // If times are equal, add one minute to end time
+          _timePeriods[index].endDate =
+              _timePeriods[index].endDate.add(Duration(minutes: 1));
+        }
+
+
+        _updateRepeatOptions();
+      });
+    }
+  }
+
+
+  Future<void> _pickEndTime(BuildContext context, int index) async {
+    if (_timePeriods[index].isAllDay) return;
+
+
+    final TimeOfDay? time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_timePeriods[index].endDate),
+    );
+
+
+    if (time != null) {
+      setState(() {
+        DateTime date = _timePeriods[index].endDate;
+        DateTime newEndDate =
+            DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+
+        if (newEndDate.isBefore(_timePeriods[index].startDate)) {
+          // Show an error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('End time cannot be before start time')),
+          );
+        } else {
+          _timePeriods[index].endDate = newEndDate;
+          _updateRepeatOptions();
+        }
+      });
+    }
+  }
+
+
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Event'),
+        title: Text('Edit Event'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: _deleteEvent,
+          ),
+        ],
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
@@ -129,15 +252,18 @@ class _EventCreationPageState extends State<EventCreationPage> {
           key: _formKey,
           child: ListView(
             children: [
-              // Title Field
+              // Title field
               TextFormField(
-                decoration: InputDecoration(labelText: 'Title'),
+                initialValue: _title,
+                decoration: InputDecoration(labelText: 'Event Title'),
                 validator: (value) =>
                     (value == null || value.isEmpty) ? 'Please enter a title' : null,
                 onSaved: (value) => _title = value ?? '',
               ),
-              // Description Field
+              SizedBox(height: 20),
+              // Description field
               TextFormField(
+                initialValue: _description,
                 decoration: InputDecoration(labelText: 'Description'),
                 onSaved: (value) => _description = value ?? '',
               ),
@@ -145,27 +271,29 @@ class _EventCreationPageState extends State<EventCreationPage> {
               // Time Periods
               _buildTimePeriods(),
               SizedBox(height: 20),
-              // Repeat Options
+              // Repeat option
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(labelText: 'Repeat'),
                 value: _repeat,
-                items: _repeatOptions
+                items: _repeatOptions 
                     .map((String value) => DropdownMenuItem<String>(
                           value: value,
                           child: Text(value),
                         ))
                     .toList(),
-                onChanged: (newValue) {
+                onChanged: (value) {
                   setState(() {
-                    _repeat = newValue!;
+                    _repeat = value!;
                   });
                 },
+                
               ),
+
               SizedBox(height: 20),
               // Save Button
               ElevatedButton(
                 onPressed: _saveEvent,
-                child: Text('Save Event'),
+                child: Text('Save Changes'),
               ),
             ],
           ),
@@ -259,121 +387,5 @@ class _EventCreationPageState extends State<EventCreationPage> {
         ),
       ),
     );
-  }
-
-
-  // Date and Time Pickers...
-
-  Future<void> _pickStartDate(BuildContext context, int index) async {
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: _timePeriods[index].startDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-
-
-    if (date != null) {
-      setState(() {
-        TimeOfDay time = TimeOfDay.fromDateTime(_timePeriods[index].startDate);
-        _timePeriods[index].startDate =
-            DateTime(date.year, date.month, date.day, time.hour, time.minute);
-
-
-        // Adjust end date if necessary
-        if (_timePeriods[index].startDate.isAfter(_timePeriods[index].endDate)) {
-          _timePeriods[index].endDate = _timePeriods[index].startDate;
-        }
-
-
-        _updateRepeatOptions();
-      });
-    }
-  }
-
-
-  Future<void> _pickEndDate(BuildContext context, int index) async {
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: _timePeriods[index].endDate,
-      firstDate: _timePeriods[index].startDate,
-      lastDate: DateTime(2101),
-    );
-
-
-    if (date != null) {
-      setState(() {
-        TimeOfDay time = TimeOfDay.fromDateTime(_timePeriods[index].endDate);
-        _timePeriods[index].endDate =
-            DateTime(date.year, date.month, date.day, time.hour, time.minute);
-        _updateRepeatOptions();
-      });
-    }
-  }
-
-
-  Future<void> _pickStartTime(BuildContext context, int index) async {
-    if (_timePeriods[index].isAllDay) return;
-
-
-    final TimeOfDay? time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_timePeriods[index].startDate),
-    );
-
-
-    if (time != null) {
-      setState(() {
-        DateTime date = _timePeriods[index].startDate;
-        _timePeriods[index].startDate =
-            DateTime(date.year, date.month, date.day, time.hour, time.minute);
-
-
-        // Adjust end time if necessary
-        if (_timePeriods[index].startDate.isAfter(_timePeriods[index].endDate)) {
-          _timePeriods[index].endDate = _timePeriods[index].startDate;
-        } else if (_timePeriods[index]
-            .startDate
-            .isAtSameMomentAs(_timePeriods[index].endDate)) {
-          // If times are equal, add one minute to end time
-          _timePeriods[index].endDate =
-              _timePeriods[index].endDate.add(Duration(minutes: 1));
-        }
-
-
-        _updateRepeatOptions();
-      });
-    }
-  }
-
-
-  Future<void> _pickEndTime(BuildContext context, int index) async {
-    if (_timePeriods[index].isAllDay) return;
-
-
-    final TimeOfDay? time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_timePeriods[index].endDate),
-    );
-
-
-    if (time != null) {
-      setState(() {
-        DateTime date = _timePeriods[index].endDate;
-        DateTime newEndDate =
-            DateTime(date.year, date.month, date.day, time.hour, time.minute);
-
-
-        if (newEndDate.isBefore(_timePeriods[index].startDate)) {
-          // Show an error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('End time cannot be before start time')),
-          );
-        } else {
-          _timePeriods[index].endDate = newEndDate;
-          _updateRepeatOptions();
-        }
-      });
-    }
   }
 }

@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../models/event.dart';
 import 'event_creation_page.dart';
+import 'event_edit_page.dart';
 
 class TimetablePage extends StatefulWidget {
   @override
@@ -38,12 +39,36 @@ class _TimetablePageState extends State<TimetablePage> {
       ),
     ).then((_) {
       // Debugging print statement
-      print('Returned from EventCreationPage, refreshing calendar.');
       setState(() {
         // The ValueListenableBuilder will automatically refresh the calendar
       });
     });
   }
+
+  void _onCalendarTapped(CalendarTapDetails details) {
+  if (details.targetElement == CalendarElement.appointment && details.appointments != null) {
+    final Appointment appointment = details.appointments!.first;
+    final String eventKeyString = appointment.notes ?? '';
+
+    if (eventKeyString.isNotEmpty) {
+      final int eventKey = int.parse(eventKeyString);
+      final Event? tappedEvent = eventBox!.get(eventKey);
+
+      if (tappedEvent != null) {
+        _navigateToEventEdit(tappedEvent);
+      }
+    }
+  }
+}
+
+  void _navigateToEventEdit(Event event) async {
+  await Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (context) => EventEditPage(event: event),
+    ),
+  );
+  setState(() {}); // Refresh the calendar after returning
+}
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +108,6 @@ class _TimetablePageState extends State<TimetablePage> {
       body: ValueListenableBuilder(
         valueListenable: eventBox!.listenable(),
         builder: (context, Box<Event> box, _) {
-          print('ValueListenableBuilder triggered, events have changed.');
           return SfCalendar(
             view: CalendarView.month,
             controller: _calendarController,
@@ -91,6 +115,7 @@ class _TimetablePageState extends State<TimetablePage> {
             monthViewSettings: MonthViewSettings(
               appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
             ),
+            onTap: _onCalendarTapped,
           );
         },
       ),
@@ -102,35 +127,24 @@ class _TimetablePageState extends State<TimetablePage> {
   }
 
   List<Appointment> _getCalendarEvents(Box<Event> box) {
-    List<Appointment> calendarEvents = [];
+    List<Appointment> appointments = [];
 
-    print('Loading events from Hive box...');
-    print('Total events in box: ${box.length}');
 
-    for (var event in box.values) {
-      print('Event loaded: ${event.title}');
-      print('Description: ${event.description}');
-      print('Repeat: ${event.repeat}');
-
-      for (var period in event.timePeriods) {
-        print('Time Period - Start: ${period.startDate}, End: ${period.endDate}, All Day: ${period.isAllDay}');
-        var appointment = Appointment(
-          startTime: period.startDate,
-          endTime: period.endDate,
+    for (var event in eventBox.values) {
+    for (var timePeriod in event.timePeriods) {
+      appointments.add(
+        Appointment(
+          startTime: timePeriod.startDate,
+          endTime: timePeriod.endDate,
+          isAllDay: timePeriod.isAllDay,
           subject: event.title,
-          notes: event.description,
-          isAllDay: period.isAllDay,
-          recurrenceRule: _getRecurrenceRule(event),
-        );
-        calendarEvents.add(appointment);
-        print('Appointment created: ${appointment.subject}');
-        print('Start Time: ${appointment.startTime}, End Time: ${appointment.endTime}');
-        print('Recurrence Rule: ${appointment.recurrenceRule}');
-      }
+          notes: event.key.toString(), // Store the event's key as a string
+          // You can also include other properties like color
+        ),
+      );
     }
-
-    print('Total appointments created: ${calendarEvents.length}');
-    return calendarEvents;
+  }
+  return appointments;
   }
 
   String? _getRecurrenceRule(Event event) {
@@ -148,7 +162,6 @@ class _TimetablePageState extends State<TimetablePage> {
     default:
       recurrenceRule = null;
   }
-  print('Recurrence rule for event "${event.title}": $recurrenceRule');
   return recurrenceRule;
 }
 }
