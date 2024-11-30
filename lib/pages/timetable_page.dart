@@ -19,31 +19,14 @@ class _TimetablePageState extends State<TimetablePage> {
   @override
   void initState() {
     super.initState();
-    _initializeHive();
+    _openMyBox();
   }
 
-  Future<void> _initializeHive() async {
-    try {
-      await Hive.initFlutter();
-      Hive.registerAdapter(EventAdapter());
-      Hive.registerAdapter(TimePeriodAdapter());
+  Future<void> _openMyBox() async {
+    if (!Hive.isBoxOpen('events')){
       eventBox = await Hive.openBox<Event>('events');
-
-      setState(() {
-        _isHiveInitialized = true;
-      });
-
-      // Debugging print statements
-      print('Hive initialized successfully.');
-      print('Total events in box on initialization: ${eventBox.length}');
-      for (var event in eventBox.values) {
-        print('Event in box: ${event.title}');
-      }
-    } catch (e) {
-      setState(() {
-        _initializationError = e.toString();
-      });
-      print('Hive initialization error: $e');
+    } else {
+      eventBox = Hive.box<Event>('events');
     }
   }
 
@@ -64,18 +47,8 @@ class _TimetablePageState extends State<TimetablePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_initializationError != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Timetable'),
-        ),
-        body: Center(
-          child: Text('Error: $_initializationError'),
-        ),
-      );
-    }
-
-    if (!_isHiveInitialized) {
+    if (eventBox == null) {
+      // Show loading indicator while the box is opening
       return Scaffold(
         appBar: AppBar(
           title: Text('Timetable'),
@@ -91,7 +64,7 @@ class _TimetablePageState extends State<TimetablePage> {
         title: Text('Timetable'),
       ),
       body: ValueListenableBuilder(
-        valueListenable: eventBox.listenable(),
+        valueListenable: eventBox!.listenable(),
         builder: (context, Box<Event> box, _) {
           print('ValueListenableBuilder triggered, events have changed.');
           return SfCalendar(

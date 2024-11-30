@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/task.dart';
+import 'models/event.dart';
 import 'pages/homepage.dart';
 import 'pages/todo_page.dart';
 import 'pages/timetable_page.dart';
@@ -18,10 +19,20 @@ void main() async {
   await Hive.initFlutter();
 
   // Register the Task adapter
-  Hive.registerAdapter(TaskAdapter());
+  if (!Hive.isAdapterRegistered (TaskAdapter().typeId)) {
+    Hive.registerAdapter(TaskAdapter());
+  }
+  if (!Hive.isAdapterRegistered (EventAdapter().typeId)) {
+    Hive.registerAdapter(EventAdapter());
+  }
+  if (!Hive.isAdapterRegistered (TimePeriodAdapter().typeId)) {
+    Hive.registerAdapter(TimePeriodAdapter());
+  }
 
   // Open the Hive box for tasks
   await Hive.openBox<Task>('tasks');
+  await Hive.openBox<Event>('events');
+
 
   // Run the Flutter application
   runApp(MyApp());
