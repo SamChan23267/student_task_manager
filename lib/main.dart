@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/task.dart';
 import 'models/event.dart';
+import 'models/notes.dart';
 import 'pages/homepage.dart';
 import 'pages/todo_page.dart';
 import 'pages/timetable_page.dart';
@@ -28,11 +29,16 @@ void main() async {
   if (!Hive.isAdapterRegistered (TimePeriodAdapter().typeId)) {
     Hive.registerAdapter(TimePeriodAdapter());
   }
+  if (!Hive.isAdapterRegistered (NoteAdapter().typeId)) {
+    Hive.registerAdapter(NoteAdapter());
+  }
 
   // Open the Hive box for tasks
 
   await Hive.openBox<Task>('tasks');
   await Hive.openBox<Event>('events');
+  await Hive.openBox<Note>('notes');
+  await Hive.openBox('settings');
 
   // Run the Flutter application
   runApp(MyApp());
@@ -53,9 +59,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Future<void> _clearHiveBoxes() async {
     var tasksBox = await Hive.openBox('tasks');
     var eventsBox = await Hive.openBox('events');
+    var notesBox = await Hive.openBox('notes');
 
     await tasksBox.clear();
     await eventsBox.clear();
+    await notesBox.clear();
   }
 
   @override
