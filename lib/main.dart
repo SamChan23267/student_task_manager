@@ -30,9 +30,9 @@ void main() async {
   }
 
   // Open the Hive box for tasks
+
   await Hive.openBox<Task>('tasks');
   await Hive.openBox<Event>('events');
-
 
   // Run the Flutter application
   runApp(MyApp());
