@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/task.dart';
+import 'models/event.dart';
 import 'pages/homepage.dart';
 import 'pages/todo_page.dart';
 import 'pages/timetable_page.dart';
@@ -18,14 +19,20 @@ void main() async {
   await Hive.initFlutter();
 
   // Register the Task adapter
-  Hive.registerAdapter(TaskAdapter());
+  if (!Hive.isAdapterRegistered (TaskAdapter().typeId)) {
+    Hive.registerAdapter(TaskAdapter());
+  }
+  if (!Hive.isAdapterRegistered (EventAdapter().typeId)) {
+    Hive.registerAdapter(EventAdapter());
+  }
+  if (!Hive.isAdapterRegistered (TimePeriodAdapter().typeId)) {
+    Hive.registerAdapter(TimePeriodAdapter());
+  }
 
   // Open the Hive box for tasks
-  var box = await Hive.openBox<Task>('tasks');
 
-  // Clear existing tasks -- remove or comment out this line in production
-  // await box.clear();
-
+  await Hive.openBox<Task>('tasks');
+  await Hive.openBox<Event>('events');
 
   // Run the Flutter application
   runApp(MyApp());
@@ -40,8 +47,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // Add the observer to listen to app lifecycle changes
-    WidgetsBinding.instance.addObserver(this);
+    //_clearHiveBoxes();
+  }
+
+  Future<void> _clearHiveBoxes() async {
+    var tasksBox = await Hive.openBox('tasks');
+    var eventsBox = await Hive.openBox('events');
+
+    await tasksBox.clear();
+    await eventsBox.clear();
   }
 
   @override
@@ -67,6 +81,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         break;
     }
   }
+
+  
 
   @override
   Widget build(BuildContext context) {
