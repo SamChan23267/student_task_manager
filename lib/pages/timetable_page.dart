@@ -15,6 +15,7 @@ class TimetablePage extends StatefulWidget {
 class _TimetablePageState extends State<TimetablePage> {
   late Box<Event> eventBox;
   CalendarController _calendarController = CalendarController();
+  CalendarView _currentView = CalendarView.month;
 
 
   @override
@@ -46,29 +47,40 @@ class _TimetablePageState extends State<TimetablePage> {
   }
 
   void _onCalendarTapped(CalendarTapDetails details) {
-  if (details.targetElement == CalendarElement.appointment && details.appointments != null) {
-    final Appointment appointment = details.appointments!.first;
-    final String eventKeyString = appointment.notes ?? '';
+    if (details.targetElement == CalendarElement.appointment && details.appointments != null) {
+      final Appointment appointment = details.appointments!.first;
+      final String eventKeyString = appointment.notes ?? '';
 
-    if (eventKeyString.isNotEmpty) {
-      final int eventKey = int.parse(eventKeyString);
-      final Event? tappedEvent = eventBox!.get(eventKey);
+      if (eventKeyString.isNotEmpty) {
+        final int eventKey = int.parse(eventKeyString);
+        final Event? tappedEvent = eventBox!.get(eventKey);
 
-      if (tappedEvent != null) {
-        _navigateToEventEdit(tappedEvent);
+        if (tappedEvent != null) {
+          _navigateToEventEdit(tappedEvent);
+        }
       }
     }
   }
-}
 
   void _navigateToEventEdit(Event event) async {
-  await Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (context) => EventEditPage(event: event),
-    ),
-  );
-  setState(() {}); // Refresh the calendar after returning
-}
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EventEditPage(event: event),
+      ),
+    );
+    setState(() {}); // Refresh the calendar after returning
+  }
+
+  void _toggleCalendarView() {
+    setState(() {
+      if (_currentView == CalendarView.month) {
+        _currentView = CalendarView.week;
+      } else {
+        _currentView = CalendarView.month;
+      }
+      _calendarController.view = _currentView;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,14 +114,26 @@ class _TimetablePageState extends State<TimetablePage> {
                 _calendarController.forward!();
               },
             ),
+            SizedBox(width: 16), // Spacing before the toggle button
+            IconButton(
+              icon: Icon(
+                _currentView == CalendarView.month
+                    ? Icons.view_week
+                    : Icons.view_module,
+              ),
+              onPressed: _toggleCalendarView,
+              tooltip: _currentView == CalendarView.month
+                  ? 'Switch to Week View'
+                  : 'Switch to Month View',
+            ),
           ],
         ),
       ),
       body: ValueListenableBuilder(
-        valueListenable: eventBox!.listenable(),
+        valueListenable: eventBox.listenable(),
         builder: (context, Box<Event> box, _) {
           return SfCalendar(
-            view: CalendarView.month,
+            view: _currentView,
             controller: _calendarController,
             dataSource: EventDataSource(_getCalendarEvents(box)),
             monthViewSettings: MonthViewSettings(
