@@ -16,7 +16,7 @@ This project is a standard Flutter application. To run it locally:
 
 2. **Clone the repository:**
 ```bash
-git clone <repository_url>
+git clone <https://github.com/SamChan23267/student_task_manager>
 ```
 3. **Navigate to the project directory:**
 ```bash
