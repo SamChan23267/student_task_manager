@@ -16,21 +16,22 @@ class _TimetablePageState extends State<TimetablePage> {
   late Box<Event> eventBox;
   CalendarController _calendarController = CalendarController();
   CalendarView _currentView = CalendarView.month;
-
+  int _recurrenceInterval = 0; // Default value
 
   @override
   void initState() {
     super.initState();
-    _openMyBox();
+    _openMyBox().then((_) {});
   }
 
   Future<void> _openMyBox() async {
-    if (!Hive.isBoxOpen('events')){
+    if (!Hive.isBoxOpen('events')) {
       eventBox = await Hive.openBox<Event>('events');
     } else {
       eventBox = Hive.box<Event>('events');
     }
   }
+
 
   void _navigateToEventCreation() {
     Navigator.push(
@@ -39,7 +40,6 @@ class _TimetablePageState extends State<TimetablePage> {
         builder: (context) => EventCreationPage(eventBox: eventBox),
       ),
     ).then((_) {
-      // Debugging print statement
       setState(() {
         // The ValueListenableBuilder will automatically refresh the calendar
       });
@@ -52,11 +52,16 @@ class _TimetablePageState extends State<TimetablePage> {
       final String eventKeyString = appointment.notes ?? '';
 
       if (eventKeyString.isNotEmpty) {
-        final int eventKey = int.parse(eventKeyString);
-        final Event? tappedEvent = eventBox!.get(eventKey);
+        try {
+          final int eventKey = int.parse(eventKeyString);
+          final Event? tappedEvent = eventBox.get(eventKey);
 
-        if (tappedEvent != null) {
-          _navigateToEventEdit(tappedEvent);
+          if (tappedEvent != null) {
+            _navigateToEventEdit(tappedEvent);
+          }
+        } catch (e) {
+          // Handle parsing error gracefully
+          print('Error parsing event key: $e');
         }
       }
     }
@@ -84,18 +89,6 @@ class _TimetablePageState extends State<TimetablePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (eventBox == null) {
-      // Show loading indicator while the box is opening
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Timetable'),
-        ),
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -117,9 +110,7 @@ class _TimetablePageState extends State<TimetablePage> {
             SizedBox(width: 16), // Spacing before the toggle button
             IconButton(
               icon: Icon(
-                _currentView == CalendarView.month
-                    ? Icons.view_week
-                    : Icons.view_module,
+                _currentView == CalendarView.month ? Icons.view_week : Icons.view_module,
               ),
               onPressed: _toggleCalendarView,
               tooltip: _currentView == CalendarView.month
@@ -153,41 +144,45 @@ class _TimetablePageState extends State<TimetablePage> {
   List<Appointment> _getCalendarEvents(Box<Event> box) {
     List<Appointment> appointments = [];
 
+    for (var event in box.values) {
+      String? rRule = _getRecurrenceRule(event);
 
-    for (var event in eventBox.values) {
-    for (var timePeriod in event.timePeriods) {
-      appointments.add(
-        Appointment(
-          startTime: timePeriod.startDate,
-          endTime: timePeriod.endDate,
-          isAllDay: timePeriod.isAllDay,
-          subject: event.title,
-          notes: event.key.toString(), // Store the event's key as a string
-          // You can also include other properties like color
-        ),
-      );
+      if (rRule == null) {
+        // Non-recurring event
+        appointments.add(
+          Appointment(
+            startTime: event.timePeriods.first.startDate,
+            endTime: event.timePeriods.first.endDate,
+            subject: event.title,
+            notes: event.key.toString(),
+            isAllDay: event.timePeriods.first.isAllDay,
+          ),
+        );
+      } else {
+        // Recurring event with FREQ=DAILY;INTERVAL=x
+        appointments.add(
+          Appointment(
+            startTime: event.timePeriods.first.startDate,
+            endTime: event.timePeriods.first.endDate,
+            subject: event.title,
+            notes: event.key.toString(),
+            isAllDay: event.timePeriods.first.isAllDay,
+            recurrenceRule: rRule,
+          ),
+        );
+      }
     }
-  }
-  return appointments;
+
+    return appointments;
   }
 
   String? _getRecurrenceRule(Event event) {
-  String? recurrenceRule;
-  switch (event.repeat) {
-    case 'Repeat daily':
-      recurrenceRule = 'FREQ=DAILY';
-      break;
-    case 'Repeat weekly':
-      recurrenceRule = 'FREQ=WEEKLY';
-      break;
-    case 'Repeat annually':
-      recurrenceRule = 'FREQ=YEARLY';
-      break;
-    default:
-      recurrenceRule = null;
+    if (event.recurrenceInterval <= 0) {
+      return null; // No recurrence
+    }
+
+    return 'FREQ=DAILY;INTERVAL=${event.recurrenceInterval}';
   }
-  return recurrenceRule;
-}
 }
 
 class EventDataSource extends CalendarDataSource {
