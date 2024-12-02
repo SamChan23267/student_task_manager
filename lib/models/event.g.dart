@@ -20,7 +20,7 @@ class EventAdapter extends TypeAdapter<Event> {
       title: fields[0] as String,
       description: fields[1] as String,
       timePeriods: (fields[2] as List).cast<TimePeriod>(),
-      repeat: fields[3] as String,
+      recurrenceInterval: fields[3] as int,
     );
   }
 
@@ -35,7 +35,7 @@ class EventAdapter extends TypeAdapter<Event> {
       ..writeByte(2)
       ..write(obj.timePeriods)
       ..writeByte(3)
-      ..write(obj.repeat);
+      ..write(obj.recurrenceInterval);
   }
 
   @override

@@ -14,13 +14,13 @@ class Event extends HiveObject {
   List<TimePeriod> timePeriods;
 
   @HiveField(3)
-  String repeat;
+  int recurrenceInterval; // Number of days between recurrences
 
   Event({
     required this.title,
     required this.description,
     required this.timePeriods,
-    this.repeat = "Doesn't repeat",
+    this.recurrenceInterval = 0, // 0 means no recurrence
   });
 }
 
