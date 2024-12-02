@@ -19,17 +19,6 @@ class _TodoPageState extends State<TodoPage> {
     taskBox = Hive.box<Task>('tasks');
   }
 
-  // Debug function to print all tasks
-  void _printAllTasks() {
-    final tasks = taskBox.values.toList().cast<Task>();
-    for (var task in tasks) {
-      debugPrint('Title: ${task.title}');
-      debugPrint('Description: ${task.description}');
-      debugPrint('Completed: ${task.isCompleted}');
-      debugPrint('Due Date: ${task.dueDate}');
-      debugPrint('-----------------------------');
-    }
-  }
 
   void _addTask() {
     String title = '';
@@ -131,7 +120,6 @@ class _TodoPageState extends State<TodoPage> {
                       taskBox.add(task);
                       Navigator.of(context).pop(); // Close the dialog
                       setState(() {});
-                      _printAllTasks(); // Print all tasks for verification
                     }
                   },
                   child: Text('Add'),
@@ -248,7 +236,6 @@ class _TodoPageState extends State<TodoPage> {
                       taskBox.putAt(index, updatedTask);
                       Navigator.of(context).pop(); // Close the dialog
                       setState(() {});
-                      _printAllTasks(); // Print all tasks for verification
                     }
                   },
                   child: Text('Save'),
@@ -280,7 +267,6 @@ class _TodoPageState extends State<TodoPage> {
               taskBox.deleteAt(index);
               Navigator.of(context).pop(); // Close the dialog
               setState(() {});
-              _printAllTasks(); // Print all tasks for verification
             },
             child: Text('Delete'),
           ),
@@ -298,7 +284,6 @@ class _TodoPageState extends State<TodoPage> {
     );
     taskBox.putAt(index, updatedTask);
     setState(() {});
-    _printAllTasks(); // Print all tasks for verification
   }
 
   @override
@@ -308,13 +293,6 @@ class _TodoPageState extends State<TodoPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('To-Do List'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.print),
-            tooltip: 'Print All Tasks',
-            onPressed: _printAllTasks,
-          ),
-        ],
       ),
       body: ValueListenableBuilder(
         valueListenable: taskBox.listenable(),
